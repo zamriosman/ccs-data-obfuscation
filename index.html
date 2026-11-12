@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Data Obfuscation Simulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#202124;--ink2:#5F6368;--ink3:#80868B;--line:#E3E5E8;--bg:#F6F7F9;--ok:#188038;--okbg:#E6F4EA;--no:#C5221F;--nobg:#FCE8E6;--warn:#B06000;--warnbg:#FEF7E0;--mono:'JetBrains Mono',ui-monospace,Menlo,monospace}
+*{box-sizing:border-box}
+html{font-size:16px}
+html.big{font-size:19px}
+body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;color:var(--ink);background:var(--bg);line-height:1.5;-webkit-font-smoothing:antialiased}
+[data-t=mask]{--c:#E37400;--cbg:#FEF3E2}
+[data-t=token]{--c:#8430CE;--cbg:#F3E8FD}
+[data-t=enc]{--c:#D93025;--cbg:#FCE8E6}
+[data-t=shuf]{--c:#188038;--cbg:#E6F4EA}
+[data-t=fpe]{--c:#1967D2;--cbg:#E8F0FE}
+[data-t=gen]{--c:#202124;--cbg:#F1F3F4}
+
+/* header */
+header{background:#fff;border-bottom:1px solid var(--line)}
+header .in{max-width:1200px;margin:auto;padding:22px 20px 18px;display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.logo{width:48px;height:48px;border-radius:14px;background:conic-gradient(#E37400 0 20%,#8430CE 0 40%,#D93025 0 60%,#188038 0 80%,#1967D2 0);display:grid;place-items:center}
+.logo span{width:30px;height:30px;border-radius:9px;background:#fff;display:grid;place-items:center;font:800 15px var(--mono)}
+header h1{margin:0;font-size:1.5rem;font-weight:800;letter-spacing:-.02em}
+header p{margin:0;color:var(--ink2);font-size:.95rem}
+.hbtn{margin-left:auto;border:1px solid var(--line);background:#fff;border-radius:10px;padding:8px 12px;font:700 .85rem Inter;cursor:pointer;color:var(--ink2)}
+.hbtn:hover{border-color:var(--ink3)}
+
+/* tabs */
+nav.tabs{position:sticky;top:0;z-index:20;background:rgba(246,247,249,.94);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+nav.tabs .in{max-width:1200px;margin:auto;display:flex;gap:6px;overflow-x:auto;padding:10px 20px;scrollbar-width:none}
+.tab{border:1px solid var(--line);background:#fff;border-radius:999px;padding:8px 14px;font:600 .88rem Inter;display:flex;align-items:center;gap:8px;cursor:pointer;white-space:nowrap;color:var(--ink2);transition:.15s}
+.tab:hover{border-color:var(--c,#9AA0A6);color:var(--ink)}
+.tab .dot{width:10px;height:10px;border-radius:50%;background:var(--c)}
+.tab .num{font:700 .72rem var(--mono);background:var(--cbg);color:var(--c);border-radius:6px;padding:1px 6px}
+.tab[aria-selected=true]{background:var(--c);border-color:var(--c);color:#fff}
+.tab[aria-selected=true] .dot{background:#fff}
+.tab[aria-selected=true] .num{background:rgba(255,255,255,.22);color:#fff}
+.tabsep{width:1px;background:var(--line);margin:4px 4px;flex:none}
+
+main{max-width:1200px;margin:auto;padding:26px 20px 40px}
+.panel{display:none}
+.panel.on{display:block;animation:fade .35s ease}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* panel head */
+.phead{display:flex;gap:16px;align-items:center;margin-bottom:20px;flex-wrap:wrap}
+.picon{width:58px;height:58px;border-radius:16px;background:var(--c);display:grid;place-items:center;color:#fff;flex:none}
+.picon svg{width:30px;height:30px}
+.step{font:700 .75rem var(--mono);color:var(--c);letter-spacing:.06em}
+h2{font-size:2rem;margin:0;font-weight:800;letter-spacing:-.025em;line-height:1.15}
+.lead{margin:4px 0 0;color:var(--ink2);font-size:1.08rem}
+.badges{display:flex;gap:8px;margin-left:auto;flex-wrap:wrap}
+.badge{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;font-weight:700;font-size:.82rem;white-space:nowrap}
+.badge i{font-style:normal;font-size:.95em}
+.badge.y{background:var(--okbg);color:var(--ok)}
+.badge.n{background:var(--nobg);color:var(--no)}
+.badge.m{background:var(--warnbg);color:var(--warn)}
+
+.grid{display:grid;grid-template-columns:5fr 7fr;gap:18px}
+@media(max-width:920px){.grid{grid-template-columns:1fr}.badges{margin-left:0}}
+.card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:18px 20px}
+.card h3{margin:0 0 14px;font-size:.75rem;text-transform:uppercase;letter-spacing:.1em;color:var(--ink3);font-weight:800;display:flex;align-items:center;gap:8px}
+.card h3::before{content:"";width:8px;height:8px;border-radius:2px;background:var(--c)}
+.diag{width:100%;height:auto;display:block}
+.diag .st{font:700 15px Inter,sans-serif;fill:#202124}
+.diag .ss{font:500 12.5px Inter,sans-serif;fill:#5F6368}
+.diag .sm{font:600 12.5px 'JetBrains Mono',monospace;fill:#202124}
+.diag .sl{font:700 11.5px Inter,sans-serif}
+.diag .sh{font:800 11px Inter,sans-serif;letter-spacing:.08em}
+.how{margin:14px 0 0;padding:0;list-style:none;counter-reset:s;display:grid;gap:8px}
+.how li{counter-increment:s;display:flex;gap:10px;align-items:flex-start;font-size:.95rem}
+.how li::before{content:counter(s);flex:none;width:22px;height:22px;border-radius:50%;background:var(--cbg);color:var(--c);font:800 .75rem Inter;display:grid;place-items:center;margin-top:1px}
+
+/* controls */
+.ctrls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.seg{display:inline-flex;background:#F1F3F4;border-radius:11px;padding:3px;gap:2px;flex-wrap:wrap}
+.seg button{border:0;background:transparent;padding:7px 12px;border-radius:9px;font:600 .84rem Inter;color:var(--ink2);cursor:pointer}
+.seg button:hover{color:var(--ink)}
+.seg button.on{background:#fff;color:var(--c);box-shadow:0 1px 3px rgba(0,0,0,.14)}
+.lbl{font-size:.75rem;font-weight:800;color:var(--ink3);text-transform:uppercase;letter-spacing:.08em}
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:12px;flex:1;min-width:180px}
+input.t{font:600 1.05rem var(--mono);padding:10px 12px;border:1.5px solid var(--line);border-radius:11px;outline:none;width:100%;color:var(--ink);background:#fff}
+input.t:focus{border-color:var(--c);box-shadow:0 0 0 3px var(--cbg)}
+.btn{background:var(--c);color:#fff;border:0;border-radius:11px;padding:10px 16px;font:700 .9rem Inter;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:.15s}
+.btn:hover{filter:brightness(1.08);transform:translateY(-1px)}
+.btn:active{transform:none}
+.btn.ghost{background:#fff;color:var(--c);border:1.5px solid var(--c)}
+.btn.grey{background:#fff;color:var(--ink2);border:1.5px solid var(--line)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+
+.vbox{margin-top:4px}
+.vtag{font-size:.72rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--ink3);margin-bottom:6px;display:flex;justify-content:space-between;gap:10px}
+.val{font:700 1.4rem var(--mono);padding:14px 16px;border-radius:13px;background:#F8F9FA;border:1.5px solid var(--line);word-break:break-all;min-height:62px;line-height:1.35}
+.val.out{background:var(--cbg);border-color:var(--c)}
+.val.small{font-size:1rem}
+.val.bad{background:var(--nobg);border-color:var(--no);color:var(--no);font:700 1rem Inter}
+.val.good{background:var(--okbg);border-color:var(--ok)}
+.val.good .ch.chg{color:var(--ok)}
+.down{display:flex;align-items:center;gap:10px;margin:8px 0;color:var(--c);font:700 .82rem Inter}
+.down svg{width:22px;height:22px}
+.ch{display:inline-block;white-space:pre}
+.ch.chg{color:var(--c);animation:pop .38s ease}
+.ch.keep{color:var(--ink3)}
+@keyframes pop{0%{transform:translateY(-8px) scale(1.35);opacity:.1}100%{transform:none;opacity:1}}
+.caption{font-size:.9rem;color:var(--ink2);margin-top:8px}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.chip{display:inline-flex;gap:6px;align-items:center;font-size:.82rem;font-weight:700;padding:5px 10px;border-radius:8px;background:#F1F3F4;color:var(--ink2)}
+.chip.y{background:var(--okbg);color:var(--ok)}
+.chip.n{background:var(--nobg);color:var(--no)}
+.chip.m{background:var(--warnbg);color:var(--warn)}
+
+.notes{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:18px}
+@media(max-width:760px){.notes{grid-template-columns:1fr}}
+.note{display:flex;gap:12px;padding:14px 16px;border-radius:14px;font-size:.95rem;background:#fff;border:1px solid var(--line)}
+.note b{display:block;font-size:.72rem;letter-spacing:.09em;text-transform:uppercase;margin-bottom:2px}
+.note .ni{flex:none;width:30px;height:30px;border-radius:9px;display:grid;place-items:center;font-weight:800}
+.note.ex .ni{background:var(--cbg);color:var(--c)} .note.ex b{color:var(--c)}
+.note.wo .ni{background:var(--warnbg);color:var(--warn)} .note.wo b{color:var(--warn)}
+
+/* vault table */
+table.vt{width:100%;border-collapse:collapse;font-size:.88rem}
+table.vt th{text-align:left;font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);padding:6px 8px;border-bottom:1.5px solid var(--line)}
+table.vt td{padding:7px 8px;border-bottom:1px solid #F1F3F4;font-family:var(--mono);font-weight:600}
+table.vt tr.new td{background:var(--cbg);animation:fade .5s}
+.vaultwrap{border:1.5px dashed var(--c);border-radius:14px;padding:12px 12px 6px;margin-top:14px;background:linear-gradient(var(--cbg),#fff 60%)}
+.vaulthead{display:flex;align-items:center;gap:8px;font-weight:800;color:var(--c);font-size:.85rem;margin-bottom:6px}
+.empty{color:var(--ink3);font:500 .85rem Inter;padding:8px}
+
+/* shuffle */
+table.sh{width:100%;border-collapse:separate;border-spacing:0 6px}
+table.sh th{text-align:left;font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);padding:0 10px}
+table.sh td{padding:6px 10px;background:#F8F9FA;font-weight:600}
+table.sh td:first-child{border-radius:10px 0 0 10px}
+table.sh td:last-child{border-radius:0 10px 10px 0}
+.pdot{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:8px;vertical-align:-1px}
+.pill{display:inline-block;padding:4px 10px;border-radius:8px;background:var(--pc);color:#fff;font:700 .9rem var(--mono);will-change:transform}
+.lk{color:var(--ok);font-weight:800;font-size:.82rem}
+.br{color:var(--no);font-weight:800;font-size:.82rem}
+.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:10px}
+@media(max-width:600px){.stats{grid-template-columns:repeat(3,1fr)}}
+.stat{background:var(--okbg);border-radius:12px;padding:10px;text-align:center}
+.stat .k{font-size:.68rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--ok)}
+.stat .v{font:700 1rem var(--mono)}
+.stat .s{font-size:.72rem;color:var(--ok);font-weight:700}
+.bigk{display:flex;align-items:center;gap:14px;margin-top:12px;padding:12px 14px;border-radius:12px;background:#F8F9FA}
+.bigk .n{font:800 2rem var(--mono);line-height:1}
+
+/* rounds */
+details{margin-top:12px;border:1px solid var(--line);border-radius:12px;padding:10px 14px;background:#fff}
+summary{cursor:pointer;font-weight:700;font-size:.9rem;color:var(--c)}
+table.rd{width:100%;border-collapse:collapse;margin-top:8px;font:600 .85rem var(--mono)}
+table.rd td,table.rd th{padding:4px 8px;border-bottom:1px solid #F1F3F4;text-align:left}
+table.rd th{font:800 .68rem Inter;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3)}
+.hl{color:var(--c)}
+
+/* overview */
+.hero{display:grid;grid-template-columns:1fr;gap:18px}
+.def{font-size:1.45rem;font-weight:700;letter-spacing:-.015em;line-height:1.35;margin:0}
+.def mark{background:linear-gradient(transparent 60%,#FDE293 0);color:inherit;padding:0 2px}
+.why{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+@media(max-width:860px){.why{grid-template-columns:1fr 1fr}}
+.wy{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;gap:12px;align-items:center;font-weight:600;font-size:.95rem}
+.wy .ic{flex:none;width:36px;height:36px;border-radius:10px;background:#F1F3F4;display:grid;place-items:center}
+.wy svg{width:20px;height:20px}
+.tcards{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+@media(max-width:1000px){.tcards{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:560px){.tcards{grid-template-columns:1fr}}
+.tc{background:#fff;border:1px solid var(--line);border-top:5px solid var(--c);border-radius:16px;padding:16px;cursor:pointer;transition:.18s;text-align:left;font:inherit;color:inherit}
+.tc:hover{transform:translateY(-3px);box-shadow:0 8px 22px rgba(0,0,0,.08)}
+.tc .ti{width:40px;height:40px;border-radius:12px;background:var(--cbg);color:var(--c);display:grid;place-items:center;margin-bottom:10px}
+.tc .ti svg{width:22px;height:22px}
+.tc h4{margin:0 0 4px;font-size:1.05rem;font-weight:800}
+.tc p{margin:0 0 10px;color:var(--ink2);font-size:.88rem}
+.mini{display:flex;flex-direction:column;gap:4px}
+.mini span{font-size:.78rem;font-weight:700;display:flex;gap:6px;align-items:center}
+.mini .y{color:var(--ok)} .mini .n{color:var(--no)} .mini .m{color:var(--warn)}
+.sect{font-size:.75rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3);margin:28px 0 12px}
+.umb{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:760px){.umb{grid-template-columns:1fr}}
+
+/* compare */
+.cmpgrid{display:grid;gap:10px}
+.cmprow{display:grid;grid-template-columns:200px 1fr 330px;gap:14px;align-items:center;background:#fff;border:1px solid var(--line);border-left:6px solid var(--c);border-radius:14px;padding:12px 16px}
+@media(max-width:900px){.cmprow{grid-template-columns:1fr}}
+.cmprow .nm{display:flex;align-items:center;gap:10px;font-weight:800}
+.cmprow .nm .ti{width:34px;height:34px;border-radius:10px;background:var(--cbg);color:var(--c);display:grid;place-items:center;flex:none}
+.cmprow .nm svg{width:19px;height:19px}
+.cmprow .o{font:700 1.08rem var(--mono);color:var(--c);word-break:break-all}
+.cmprow .o small{display:block;font:500 .78rem Inter;color:var(--ink3)}
+.cmprow .bb{display:flex;gap:6px;flex-wrap:wrap}
+table.mx{width:100%;border-collapse:separate;border-spacing:0;background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden;font-size:.92rem}
+table.mx th{background:#F8F9FA;text-align:left;padding:12px 14px;font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3)}
+table.mx td{padding:12px 14px;border-top:1px solid var(--line);vertical-align:top}
+table.mx td.c{text-align:center;font-size:1.15rem;font-weight:800}
+.ty{color:var(--ok)} .tn{color:var(--no)} .tm{color:var(--warn)}
+.tname{display:flex;align-items:center;gap:8px;font-weight:800;white-space:nowrap}
+.tname .sw{width:12px;height:12px;border-radius:4px;background:var(--c)}
+
+/* choose */
+.qs{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+@media(max-width:860px){.qs{grid-template-columns:1fr}}
+.q{background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px}
+.q .qn{font:800 .75rem var(--mono);color:var(--ink3)}
+.q h4{margin:4px 0 12px;font-size:1.08rem}
+.q .seg{--c:#202124}
+.res{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-top:18px}
+@media(max-width:1000px){.res{grid-template-columns:1fr 1fr}}
+.rc{background:#fff;border:2px solid var(--line);border-radius:16px;padding:14px;transition:.25s;position:relative}
+.rc .ti{width:36px;height:36px;border-radius:10px;background:var(--cbg);color:var(--c);display:grid;place-items:center;margin-bottom:8px}
+.rc .ti svg{width:20px;height:20px}
+.rc h4{margin:0 0 6px;font-size:1rem}
+.rc .st{font-size:.72rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+.rc ul{margin:8px 0 0;padding:0;list-style:none;display:grid;gap:4px;font-size:.84rem;color:var(--ink2)}
+.rc.best{border-color:var(--c);box-shadow:0 0 0 4px var(--cbg),0 10px 24px rgba(0,0,0,.08);transform:translateY(-4px)}
+.rc.best .st{color:var(--c)}
+.rc.no{opacity:.38;filter:grayscale(.8)}
+.rc.no .st{color:var(--no)}
+.rc.ok .st{color:var(--ink2)}
+.flag{position:absolute;top:-11px;right:12px;background:var(--c);color:#fff;font:800 .68rem Inter;letter-spacing:.08em;padding:3px 9px;border-radius:999px;text-transform:uppercase}
+.inds{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media(max-width:860px){.inds{grid-template-columns:1fr}}
+
+footer{max-width:1200px;margin:0 auto;padding:0 20px 40px;color:var(--ink3);font-size:.85rem}
+footer a{color:var(--ink2)}
+.mono{font-family:var(--mono)}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<header><div class="in">
+  <div class="logo"><span>#</span></div>
+  <div>
+    <h1>Data Obfuscation Simulator</h1>
+    <p>See how five techniques turn sensitive data into safe, usable data, one step at a time.</p>
+  </div>
+  <button class="hbtn" id="bigBtn" title="Larger text for projector">A+ Projector text</button>
+</div></header>
+
+<nav class="tabs" aria-label="Sections"><div class="in" id="tabs" role="tablist"></div></nav>
+
+<main>
+
+<!-- ============ OVERVIEW ============ -->
+<section class="panel" id="p-overview" data-t="gen">
+  <div class="hero">
+    <p class="def">Data obfuscation replaces sensitive data with <mark>realistic but fake values</mark>, so a copy stays useful for testing, analytics and sharing, while the real data stays protected.</p>
+    <div class="card" data-t="gen"><h3>The big picture</h3><div id="ovDiag"></div></div>
+  </div>
+
+  <div class="sect">Why organisations do it</div>
+  <div class="why">
+    <div class="wy"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="#D93025" stroke-width="2"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/></svg></div>Lower breach &amp; misuse risk</div>
+    <div class="wy"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="#1967D2" stroke-width="2"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h3"/></svg></div>Comply with GDPR, HIPAA, CCPA</div>
+    <div class="wy"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="#8430CE" stroke-width="2"><circle cx="8" cy="9" r="3"/><circle cx="16" cy="9" r="3"/><path d="M3 20c0-3 2.5-5 5-5s5 2 5 5M11 20c0-3 2.5-5 5-5s5 2 5 5"/></svg></div>Share safely with partners &amp; vendors</div>
+    <div class="wy"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="#188038" stroke-width="2"><path d="M4 12l5 5L20 6"/></svg></div>Keep systems working with realistic data</div>
+  </div>
+
+  <div class="sect">Five techniques · click one to try it</div>
+  <div class="tcards" id="tcards"></div>
+
+  <div class="sect">Two ideas to remember</div>
+  <div class="umb">
+    <div class="card" data-t="gen"><h3>Obfuscation vs masking</h3><div id="umbDiag"></div>
+      <p class="caption">Obfuscation is the <b>policy</b>: which technique applies to which data. Masking is <b>one technique</b> inside it.</p></div>
+    <div class="card" data-t="gen"><h3>Three questions decide the technique</h3>
+      <ol class="how" style="--c:#202124;--cbg:#F1F3F4">
+        <li><span><b>Must it be reversible?</b> Encryption, tokenization and FPE: yes. Masking and shuffling: usually no.</span></li>
+        <li><span><b>Must the format stay the same?</b> Masking, tokenization and FPE: yes. Encryption: no.</span></li>
+        <li><span><b>Will it feed analytics?</b> Shuffling keeps distributions. Masking and tokenization can break joins. Encryption breaks most analytics.</span></li>
+      </ol>
+      <div style="margin-top:14px"><button class="btn" style="--c:#202124" onclick="go('choose')">Try the technique picker →</button></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ MASKING ============ -->
+<section class="panel" id="p-masking" data-t="mask">
+  <div class="phead" data-k="mask"></div>
+  <div class="grid">
+    <div class="card"><h3>How it works</h3><div id="maskDiag"></div>
+      <ol class="how">
+        <li>Pick the sensitive field.</li>
+        <li>Apply a rule: hide part of it, or swap it for a realistic fake.</li>
+        <li><b>Static</b>: save a masked copy. <b>Dynamic</b>: mask at query time for unauthorised users.</li>
+      </ol>
+    </div>
+    <div class="card"><h3>Try it</h3>
+      <div class="ctrls"><span class="lbl">Field</span>
+        <div class="seg" id="mField"><button data-v="card" class="on">Card number</button><button data-v="ic">IC number</button><button data-v="email">Email</button><button data-v="phone">Phone</button><button data-v="name">Name</button></div>
+      </div>
+      <div class="ctrls"><span class="lbl">Rule</span>
+        <div class="seg" id="mRule"><button data-v="partial" class="on">Partial (show last 4)</button><button data-v="sub">Substitute (fake)</button><button data-v="redact">Full redact</button></div>
+      </div>
+      <div class="ctrls"><span class="lbl">Type</span>
+        <div class="seg" id="mType"><button data-v="static" class="on">Static</button><button data-v="dynamic">Dynamic</button></div>
+        <span class="lbl" style="margin-left:6px">Viewer</span>
+        <div class="seg" id="mRole"><button data-v="dev" class="on">Developer</button><button data-v="auth">Authorised investigator</button></div>
+      </div>
+      <div class="field"><span class="lbl">Original (real) value</span><input class="t" id="mIn" spellcheck="false"></div>
+      <div class="down"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 4v16M5 13l7 7 7-7"/></svg><span id="mArrow">masking rule applied</span></div>
+      <div class="vbox"><div class="vtag"><span id="mOutTag">What the developer sees</span><button class="btn ghost" style="padding:4px 10px;font-size:.78rem" id="mRegen">↻ New fake</button></div>
+        <div class="val out" id="mOut"></div></div>
+      <div class="caption" id="mCap"></div>
+    </div>
+  </div>
+  <div class="notes" data-k="mask"></div>
+</section>
+
+<!-- ============ TOKENIZATION ============ -->
+<section class="panel" id="p-tokenization" data-t="token">
+  <div class="phead" data-k="token"></div>
+  <div class="grid">
+    <div class="card"><h3>How it works</h3><div id="tokDiag"></div>
+      <ol class="how">
+        <li>The real value goes to a tokenization service.</li>
+        <li>It returns a <b>random</b> token, with no mathematical link to the original.</li>
+        <li>The mapping is kept only in a secure vault. Only authorised callers can swap the token back.</li>
+      </ol>
+    </div>
+    <div class="card"><h3>Try it</h3>
+      <div class="ctrls"><span class="lbl">Token style</span>
+        <div class="seg" id="tStyle"><button data-v="rand" class="on">Random token</button><button data-v="fp">Format-preserving token</button></div>
+      </div>
+      <div class="row">
+        <div class="field"><span class="lbl">Card number</span><input class="t" id="tIn" value="4532 0151 1283 0366" spellcheck="false"></div>
+        <div class="field" style="flex:none;min-width:0"><button class="btn" id="tGo">Tokenize →</button></div>
+        <div class="field" style="flex:none;min-width:0"><button class="btn grey" id="tRnd" title="Random sample card">🎲 Another card</button></div>
+      </div>
+      <div class="vbox"><div class="vtag"><span>Token used by apps &amp; analysts</span><span id="tReuse" style="color:var(--c)"></span></div><div class="val out" id="tOut">—</div></div>
+      <div class="vaultwrap">
+        <div class="vaulthead"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg> Secure vault (only place the link exists)</div>
+        <div id="tVault"></div>
+      </div>
+      <div class="ctrls" style="margin-top:14px"><span class="lbl">Caller vault access</span>
+        <div class="seg" id="tAccess"><button data-v="no" class="on">Denied</button><button data-v="yes">Granted</button></div>
+        <button class="btn ghost" id="tDetok">← Detokenize</button>
+      </div>
+      <div class="val small" id="tBack" style="min-height:48px;color:var(--ink3);font-family:Inter;font-weight:500">Press Detokenize to try turning the token back.</div>
+    </div>
+  </div>
+  <div class="notes" data-k="token"></div>
+</section>
+
+<!-- ============ ENCRYPTION ============ -->
+<section class="panel" id="p-encryption" data-t="enc">
+  <div class="phead" data-k="enc"></div>
+  <div class="grid">
+    <div class="card"><h3>How it works</h3><div id="encDiag"></div>
+      <ol class="how">
+        <li>An algorithm plus a key turns plaintext into unreadable ciphertext.</li>
+        <li><b>Symmetric</b>: one shared key, fast, harder to manage at scale.</li>
+        <li><b>Asymmetric</b>: public key encrypts, private key decrypts. Slower, easier to manage securely.</li>
+      </ol>
+    </div>
+    <div class="card"><h3>Try it · real AES-256 / RSA in your browser</h3>
+      <div class="ctrls"><span class="lbl">Mode</span>
+        <div class="seg" id="eMode"><button data-v="sym" class="on">Symmetric (AES)</button><button data-v="asym">Asymmetric (RSA)</button></div>
+      </div>
+      <div class="field"><span class="lbl">Plaintext</span><input class="t" id="eIn" value="Aisyah Rahman, RM 8,400" maxlength="150" spellcheck="false"></div>
+      <div class="row" id="eSymKey">
+        <div class="field"><span class="lbl">Shared key (passphrase)</span><input class="t" id="eKey" value="utm-class-2026" spellcheck="false"></div>
+      </div>
+      <div id="eAsymKey" class="chips" style="display:none;margin:0 0 12px"></div>
+      <button class="btn" id="eGo">Encrypt →</button>
+      <div class="vbox" style="margin-top:12px"><div class="vtag"><span>Ciphertext (Base64)</span><span id="eLen"></span></div><div class="val out small" id="eOut">—</div></div>
+      <div class="chips" id="eChips"></div>
+      <div style="border-top:1px dashed var(--line);margin:16px 0 12px"></div>
+      <div class="row" id="eDecSym">
+        <div class="field"><span class="lbl">Decrypt with key</span><input class="t" id="eKey2" value="utm-class-2026" spellcheck="false"></div>
+        <div class="field" style="flex:none;min-width:0"><button class="btn ghost" id="eDec">← Decrypt</button></div>
+      </div>
+      <div class="row" id="eDecAsym" style="display:none;margin-bottom:12px">
+        <button class="btn ghost" id="eDecPriv">← Decrypt with private key</button>
+        <button class="btn grey" id="eDecPub">Try with public key</button>
+      </div>
+      <div class="val small" id="eBack" style="min-height:48px;color:var(--ink3);font-family:Inter;font-weight:500">Encrypt first, then try decrypting with the right and wrong key.</div>
+    </div>
+  </div>
+  <div class="notes" data-k="enc"></div>
+</section>
+
+<!-- ============ SHUFFLING ============ -->
+<section class="panel" id="p-shuffling" data-t="shuf">
+  <div class="phead" data-k="shuf"></div>
+  <div class="grid">
+    <div class="card"><h3>How it works</h3><div id="shufDiag"></div>
+      <ol class="how">
+        <li>Take one sensitive column, e.g. salary.</li>
+        <li>Reorder its values randomly across rows.</li>
+        <li>Totals and distribution stay real. Who-earns-what is lost.</li>
+      </ol>
+    </div>
+    <div class="card"><h3>Try it · colour = whose salary it really is</h3>
+      <div class="ctrls">
+        <button class="btn" id="sGo">⤮ Shuffle salary column</button>
+        <button class="btn grey" id="sReset">Reset</button>
+      </div>
+      <table class="sh"><thead><tr><th>Employee</th><th>Dept</th><th>Salary</th><th>Row link</th></tr></thead><tbody id="sBody"></tbody></table>
+      <div class="bigk"><div class="n" id="sLinked">8/8</div><div><b>rows still show the person's real salary</b><div class="caption" style="margin:0">Column statistics below stay exactly the same.</div></div></div>
+      <div class="stats" id="sStats"></div>
+    </div>
+  </div>
+  <div class="notes" data-k="shuf"></div>
+</section>
+
+<!-- ============ FPE ============ -->
+<section class="panel" id="p-fpe" data-t="fpe">
+  <div class="phead" data-k="fpe"></div>
+  <div class="grid">
+    <div class="card"><h3>How it works</h3><div id="fpeDiag"></div>
+      <ol class="how">
+        <li>Split the digits into two halves.</li>
+        <li>Run several key-driven rounds that mix one half into the other, staying inside 0–9.</li>
+        <li>Output keeps the same length and pattern, so strict validators still accept it. The key reverses it.</li>
+      </ol>
+    </div>
+    <div class="card"><h3>Try it</h3>
+      <div class="ctrls"><span class="lbl">Sample</span>
+        <div class="seg" id="fSample"><button data-v="4532 0151 1283 0366" class="on">Card</button><button data-v="900101-14-5678">IC number</button><button data-v="012-345 6789">Phone</button></div>
+      </div>
+      <div class="row">
+        <div class="field"><span class="lbl">Original</span><input class="t" id="fIn" value="4532 0151 1283 0366" spellcheck="false"></div>
+        <div class="field" style="max-width:220px"><span class="lbl">Key</span><input class="t" id="fKey" value="utm-class-2026" spellcheck="false"></div>
+      </div>
+      <button class="btn" id="fGo">Encrypt (FPE) →</button>
+      <div class="vbox" style="margin-top:12px"><div class="vtag"><span>FPE output · only digits change</span></div><div class="val out" id="fOut">—</div></div>
+      <div class="chips" id="fChips"></div>
+      <div class="vbox" style="margin-top:12px"><div class="vtag"><span>Same input with standard encryption (AES)</span></div><div class="val small" id="fAes" style="color:var(--ink2)">—</div></div>
+      <details><summary>Show the rounds (Feistel network)</summary><div id="fRounds"></div></details>
+      <div style="border-top:1px dashed var(--line);margin:16px 0 12px"></div>
+      <div class="row">
+        <div class="field"><span class="lbl">Decrypt with key</span><input class="t" id="fKey2" value="utm-class-2026" spellcheck="false"></div>
+        <div class="field" style="flex:none;min-width:0"><button class="btn ghost" id="fDec">← Decrypt</button></div>
+      </div>
+      <div class="val small" id="fBack" style="min-height:48px;color:var(--ink3);font-family:Inter;font-weight:500">Encrypt first, then decrypt with the right key and a wrong one.</div>
+    </div>
+  </div>
+  <div class="notes" data-k="fpe"></div>
+</section>
+
+<!-- ============ COMPARE ============ -->
+<section class="panel" id="p-compare" data-t="gen">
+  <div class="phead"><div class="picon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></div>
+    <div><h2>One value, five techniques</h2><p class="lead">Type a card number and watch every technique protect it at once.</p></div></div>
+  <div class="card" style="margin-bottom:14px"><div class="row">
+    <div class="field" style="margin:0"><span class="lbl">Original value</span><input class="t" id="cIn" value="4532 0151 1283 0366" spellcheck="false"></div>
+    <div class="field" style="flex:none;min-width:0;margin:0"><button class="btn" id="cGo">Run all five →</button></div>
+  </div></div>
+  <div class="cmpgrid" id="cRows"></div>
+  <div class="sect">Side-by-side summary</div>
+  <div id="mx"></div>
+</section>
+
+<!-- ============ CHOOSE ============ -->
+<section class="panel" id="p-choose" data-t="gen">
+  <div class="phead"><div class="picon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></svg></div>
+    <div><h2>Which technique fits?</h2><p class="lead">Answer three questions. The best fit lights up; unsuitable ones fade out.</p></div></div>
+  <div class="qs">
+    <div class="q"><div class="qn">Q1</div><h4>Must you get the original value back?</h4><div class="seg" id="q1"><button data-v="y">Yes</button><button data-v="n">No</button><button data-v="u" class="on">Not sure</button></div></div>
+    <div class="q"><div class="qn">Q2</div><h4>Must the format stay the same?</h4><div class="seg" id="q2"><button data-v="y">Yes</button><button data-v="n">No</button><button data-v="u" class="on">Not sure</button></div></div>
+    <div class="q"><div class="qn">Q3</div><h4>Will the data feed aggregate analytics?</h4><div class="seg" id="q3"><button data-v="y">Yes</button><button data-v="n">No</button><button data-v="u" class="on">Not sure</button></div></div>
+  </div>
+  <div class="res" id="res"></div>
+  <div class="sect">Real-world matches</div>
+  <div class="inds">
+    <div class="note ex" data-t="token"><div class="ni">$</div><div><b>Financial services</b>Card numbers are tokenized so fraud analysts can find patterns without seeing real payment credentials.</div></div>
+    <div class="note ex" data-t="mask"><div class="ni">+</div><div><b>Healthcare</b>Patient names, birth dates and IDs are masked before a records-system migration, so vendors test with realistic data.</div></div>
+    <div class="note ex" data-t="shuf"><div class="ni">%</div><div><b>HR &amp; payroll</b>Salaries are shuffled across 12,000 employee records for benchmarking. Totals stay real, individual pay stays private.</div></div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  Teaching tool. Concepts follow OvalEdge, <a href="https://www.ovaledge.com/blog/data-obfuscation">“Data obfuscation”</a>. Encryption uses your browser's real AES-256-GCM and RSA-OAEP. The tokenization vault and FPE (an FF1-style Feistel network with 10 rounds) are simplified teaching models, not production cryptography. All sample people and numbers are fictional.
+</footer>
+
+<script>
+/* ---------- data ---------- */
+const ICON={
+ mask:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/><line x1="3" y1="3" x2="21" y2="21"/></svg>',
+ token:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 7h18v3a2 2 0 0 0 0 4v3H3v-3a2 2 0 0 0 0-4z"/><path d="M14 7v10" stroke-dasharray="2 2.5"/></svg>',
+ enc:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/><circle cx="12" cy="16" r="1.4" fill="currentColor"/></svg>',
+ shuf:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>',
+ fpe:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="10" width="18" height="11" rx="2"/><path d="M7 10V7a5 5 0 0 1 10 0v3"/><path d="M10.5 13l-1 6M14.5 13l-1 6M8.5 14.8h7M8 17.3h7"/></svg>'
+};
+const TECH=[
+ {k:'mask',id:'masking',n:1,name:'Masking',one:'Hide part of a value, or replace it with a realistic look-alike.',
+  rev:['n','Not reversible'],fmt:['y','Format kept'],ana:['m','May break joins'],use:'Dev, test, training, demos',
+  how:'Hides or substitutes values. Static (masked copy) or dynamic (masked at query time).',
+  ex:'Healthcare: patient names, birth dates and IDs are masked before a records-system migration so vendors can test with realistic data.',
+  wo:'Usually one-way, so the real data must be kept safely elsewhere. Masked keys can break joins between tables.'},
+ {k:'token',id:'tokenization',n:2,name:'Tokenization',one:'Swap the value for a random token. The real value lives only in a vault.',
+  rev:['y','Reversible (vault)'],fmt:['m','Format: depends'],ana:['m','May break joins'],use:'Payment processing',
+  how:'Random token with no mathematical link; mapping kept in a secure vault.',
+  ex:'Financial services: card numbers are tokenized so fraud analysts find patterns without seeing real payment credentials.',
+  wo:'The vault becomes the most valuable target. Protect it and control who can detokenize.'},
+ {k:'enc',id:'encryption',n:3,name:'Encryption',one:'Turn data into unreadable ciphertext with an algorithm and a key.',
+  rev:['y','Reversible (key)'],fmt:['n','Format lost'],ana:['n','Breaks analytics'],use:'Data at rest & in transit',
+  how:'Algorithm + key → ciphertext. Symmetric (one key) or asymmetric (key pair).',
+  ex:'Protects stored data (databases, backups) and data moving across networks.',
+  wo:'Ciphertext cannot be queried, joined or aggregated without decrypting. Keys must be managed securely.'},
+ {k:'shuf',id:'shuffling',n:4,name:'Data scrambling (shuffling)',one:'Reorder values within a column so rows no longer match real people.',
+  rev:['n','Not reversible'],fmt:['y','Shape kept'],ana:['y','Analytics-friendly'],use:'Aggregate analytics, reporting, training data',
+  how:'Reorders a column; distributions stay realistic, row-level link is destroyed.',
+  ex:'HR & payroll: salaries are shuffled across 12,000 employee records for benchmarking. Totals stay real, individual pay stays private.',
+  wo:'The row-level link is gone for good. Any analysis that relies on who-has-what in that column will be wrong.'},
+ {k:'fpe',id:'fpe',n:5,name:'Format-preserving encryption',one:'Encrypt, but keep the exact format: 16 digits stay 16 digits.',
+  rev:['y','Reversible (key)'],fmt:['y','Format kept'],ana:['m','Limited'],use:'Payments, HR, healthcare systems',
+  how:'Encrypts while keeping length and pattern, so strict format checks still pass.',
+  ex:'Systems that strictly validate format, such as payments, HR and healthcare, keep working with encrypted values.',
+  wo:'Keys still need secure management. A wrong key gives a valid-looking but wrong value, so errors are easy to miss.'}
+];
+const T=Object.fromEntries(TECH.map(t=>[t.k,t]));
+const COLOR={mask:['#E37400','#FEF3E2'],token:['#8430CE','#F3E8FD'],enc:['#D93025','#FCE8E6'],shuf:['#188038','#E6F4EA'],fpe:['#1967D2','#E8F0FE']};
+const SYM={y:'✓',n:'✗',m:'~'};
+const $=s=>document.querySelector(s);
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ---------- tabs & routing ---------- */
+const TABS=[['overview','gen','Overview'],...TECH.map(t=>[t.id,t.k,{shuf:'Scrambling',fpe:'FPE'}[t.k]||t.name,t.n]),['sep'],['compare','gen','Compare'],['choose','gen','Which one?']];
+$('#tabs').innerHTML=TABS.map(([id,k,label,n])=>id==='sep'?'<span class="tabsep"></span>':
+ `<button class="tab" role="tab" data-t="${k}" data-go="${id}">${n?`<span class="num">${n}</span>`:'<span class="dot"></span>'}${label}</button>`).join('');
+function go(id){
+ if(!document.getElementById('p-'+id)) id='overview';
+ document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('on',p.id==='p-'+id));
+ document.querySelectorAll('.tab').forEach(b=>b.setAttribute('aria-selected',b.dataset.go===id));
+ const tb=document.querySelector(`.tab[data-go="${id}"]`); if(tb) tb.scrollIntoView({block:'nearest',inline:'center'});
+ if(location.hash!=='#'+id){ try{history.replaceState(null,'','#'+id)}catch(e){location.hash=id} }
+ window.scrollTo({top:0});
+}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-go]'); if(b) go(b.dataset.go)});
+addEventListener('hashchange',()=>go(location.hash.slice(1)));
+$('#bigBtn').onclick=()=>document.documentElement.classList.toggle('big');
+
+/* ---------- shared UI builders ---------- */
+const badge=(a,label)=>`<span class="badge ${a}"><i>${SYM[a]}</i>${label}</span>`;
+function badges(t){return badge(t.rev[0],t.rev[1])+badge(t.fmt[0],t.fmt[1])+badge(t.ana[0],t.ana[1])}
+document.querySelectorAll('.phead[data-k]').forEach(el=>{const t=T[el.dataset.k];
+ el.innerHTML=`<div class="picon">${ICON[t.k]}</div><div><div class="step">TECHNIQUE ${t.n} OF 5</div><h2>${t.name}</h2><p class="lead">${t.one}</p></div><div class="badges">${badges(t)}</div>`;});
+document.querySelectorAll('.notes[data-k]').forEach(el=>{const t=T[el.dataset.k];
+ el.innerHTML=`<div class="note ex"><div class="ni">✓</div><div><b>Real-world example</b>${t.ex}</div></div><div class="note wo"><div class="ni">!</div><div><b>Watch out</b>${t.wo}</div></div>`;});
+$('#tcards').innerHTML=TECH.map(t=>`<button class="tc" data-t="${t.k}" data-go="${t.id}"><div class="ti">${ICON[t.k]}</div><h4>${t.n}. ${t.name}</h4><p>${t.one}</p>
+ <div class="mini"><span class="${t.rev[0]}">${SYM[t.rev[0]]} ${t.rev[1]}</span><span class="${t.fmt[0]}">${SYM[t.fmt[0]]} ${t.fmt[1]}</span><span class="${t.ana[0]}">${SYM[t.ana[0]]} ${t.ana[1]}</span></div></button>`).join('');
+
+document.querySelectorAll('.how li').forEach(li=>{li.innerHTML='<span>'+li.innerHTML+'</span>'});
+/* segmented controls */
+const SEG={};
+document.addEventListener('click',e=>{const b=e.target.closest('.seg button'); if(!b) return; const s=b.parentElement;
+ s.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b)); if(SEG[s.id]) SEG[s.id](b.dataset.v);});
+const segVal=id=>document.querySelector('#'+id+' button.on').dataset.v;
+
+/* animated character render: changed chars pop in technique colour, kept chars grey */
+function renderChars(el,from,to,opts={}){
+ (el._tm||[]).forEach(clearTimeout); el._tm=[];
+ el.innerHTML='';
+ const step=opts.step??(to.length>40?8:32);
+ [...to].forEach((c,i)=>{const s=document.createElement('span'); s.className='ch';
+  const changed=from[i]!==c;
+  if(!changed){s.textContent=c; if(opts.dimKept) s.classList.add('keep'); el.appendChild(s); return;}
+  s.textContent=(from[i]&&from[i]!==' ')?from[i]:' ';
+  el.appendChild(s);
+  const f=()=>{s.textContent=c; s.classList.add('chg')};
+  if(reduce) f(); else el._tm.push(setTimeout(f,i*step));
+ });
+}
+function msg(el,html,cls){el.className='val small '+(cls||''); el.style.cssText='min-height:48px'; el.innerHTML=html;}
+
+/* ---------- SVG diagram helpers ---------- */
+function bx(x,y,w,h,title,sub,o={}){
+ const ty=o.top?y+26:(sub?y+h/2-5:y+h/2+5), sy=o.top?y+46:y+h/2+16;
+ return `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="12" fill="${o.f||'#fff'}" stroke="${o.c||'#DADCE0'}" stroke-width="${o.sw||1.6}" ${o.dash?'stroke-dasharray="5 4"':''}/>`+
+ `<text x="${x+w/2}" y="${ty}" text-anchor="middle" class="st" ${o.tc?`fill="${o.tc}"`:''}>${title}</text>`+
+ (sub?`<text x="${x+w/2}" y="${sy}" text-anchor="middle" class="${o.mono?'sm':'ss'}" ${o.sc?`style="fill:${o.sc}"`:''}>${sub}</text>`:'');
+}
+function ar(x1,y1,x2,y2,c='#9AA0A6',label='',o={}){
+ const a=Math.atan2(y2-y1,x2-x1),L=10;
+ const p1=[x2-L*Math.cos(a-.45),y2-L*Math.sin(a-.45)],p2=[x2-L*Math.cos(a+.45),y2-L*Math.sin(a+.45)];
+ let s=`<line x1="${x1}" y1="${y1}" x2="${x2-L*.7*Math.cos(a)}" y2="${y2-L*.7*Math.sin(a)}" stroke="${c}" stroke-width="2.2" ${o.dash?'stroke-dasharray="5 4"':''}/><polygon points="${x2},${y2} ${p1} ${p2}" fill="${c}"/>`;
+ if(label) s+=`<text x="${(x1+x2)/2+(o.lx||0)}" y="${(y1+y2)/2+(o.ly??-8)}" text-anchor="${o.anchor||'middle'}" class="sl" fill="${c}">${label}</text>`;
+ return s;
+}
+const keyI=(x,y,c)=>`<g transform="translate(${x},${y})" stroke="${c}" stroke-width="2.4" fill="none" stroke-linecap="round"><circle cx="7" cy="7" r="6"/><path d="M13 7h17M25 7v6M30 7v5"/></g>`;
+const lockI=(x,y,c)=>`<g transform="translate(${x},${y})"><rect x="0" y="8" width="16" height="12" rx="2.5" fill="${c}"/><path d="M3.5 8V5.5a4.5 4.5 0 0 1 9 0V8" stroke="${c}" stroke-width="2.2" fill="none"/></g>`;
+const svg=(w,h,inner,label)=>`<svg class="diag" viewBox="0 0 ${w} ${h}" role="img" aria-label="${label}">${inner}</svg>`;
+
+/* overview diagram */
+(function(){
+ let s='';
+ s+=`<text x="140" y="24" text-anchor="middle" class="sh" fill="#C5221F">REAL DATA · PROTECTED</text>`;
+ s+=`<path d="M30 62 v178 a110 22 0 0 0 220 0 v-178" fill="#fff" stroke="#C5221F" stroke-width="1.8"/><ellipse cx="140" cy="62" rx="110" ry="22" fill="#FCE8E6" stroke="#C5221F" stroke-width="1.8"/>`;
+ s+=`<text x="140" y="67" text-anchor="middle" class="st">Production data</text>`;
+ [['Name','Aisyah Rahman'],['IC','900101-14-5678'],['Card','4532 0151 1283 0366'],['Salary','RM 6,200']].forEach(([k,v],i)=>{
+  const y=118+i*32; s+=`<circle cx="48" cy="${y-4}" r="4" fill="#C5221F"/><text x="58" y="${y}" class="ss">${k}</text><text x="108" y="${y}" class="sm">${v}</text>`;});
+ s+=ar(262,160,336,160,'#5F6368','apply');
+ s+=`<rect x="340" y="34" width="290" height="252" rx="16" fill="#F8F9FA" stroke="#5F6368" stroke-width="1.6"/>`;
+ s+=`<text x="485" y="62" text-anchor="middle" class="st">Obfuscation policy</text><text x="485" y="80" text-anchor="middle" class="ss">picks a technique per data type</text>`;
+ TECH.forEach((t,i)=>{const y=96+i*36,[c,bg]=COLOR[t.k];
+  s+=`<g style="cursor:pointer" onclick="go('${t.id}')"><rect x="360" y="${y}" width="250" height="28" rx="8" fill="${bg}"/><rect x="360" y="${y}" width="6" height="28" rx="3" fill="${c}"/><text x="378" y="${y+19}" class="sl" style="font-size:13px" fill="${c}">${t.n}. ${t.name}</text></g>`;});
+ s+=`<text x="850" y="24" text-anchor="middle" class="sh" fill="#188038">SAFE COPY · USABLE</text>`;
+ [['Dev & test','realistic fake data'],['Analytics','patterns, not people'],['Partners & vendors','safe to share']].forEach(([a,b],i)=>{
+  const y=42+i*86; s+=ar(632,160,722,y+34,'#188038',i===1?'':'');
+  s+=bx(726,y,248,68,a,b,{c:'#188038'});});
+ s+=`<text x="500" y="318" text-anchor="middle" class="ss">The original stays protected elsewhere; most people only ever work with the obfuscated copy.</text>`;
+ $('#ovDiag').innerHTML=svg(1000,330,s,'Production data passes through an obfuscation policy to produce safe copies for dev, analytics and partners');
+ // umbrella
+ let u=`<rect x="10" y="10" width="520" height="150" rx="18" fill="#F8F9FA" stroke="#5F6368" stroke-dasharray="6 5" stroke-width="1.6"/><text x="30" y="36" class="sh" fill="#5F6368">OBFUSCATION · THE UMBRELLA POLICY</text>`;
+ TECH.forEach((t,i)=>{const x=24+i*101,[c,bg]=COLOR[t.k];u+=`<rect x="${x}" y="54" width="92" height="90" rx="12" fill="${bg}" stroke="${c}" stroke-width="${t.k==='mask'?3:1.2}"/><text x="${x+46}" y="92" text-anchor="middle" class="st" fill="${c}" style="font-size:22px">${t.n}</text><text x="${x+46}" y="118" text-anchor="middle" class="sl" fill="${c}">${['Masking','Tokenize','Encrypt','Shuffle','FPE'][i]}</text>`});
+ $('#umbDiag').innerHTML=svg(540,170,u,'Obfuscation contains masking, tokenization, encryption, shuffling and FPE');
+})();
+
+/* technique diagrams */
+(function(){
+ let [c,bg]=COLOR.mask, s='';
+ s+=bx(8,30,168,72,'Original','4532 0151 1283 0366',{mono:1});
+ s+=ar(178,66,205,66,c);
+ s+=bx(208,30,150,72,'Mask rule','hide all but last 4',{c,f:bg,tc:c});
+ s+=ar(360,66,387,66,c);
+ s+=bx(390,30,162,72,'Masked','•••• •••• •••• 0366',{c,mono:1,sc:c});
+ s+=`<path d="M283 102 L190 158 M283 102 L376 158" stroke="#9AA0A6" stroke-width="2" stroke-dasharray="5 4" fill="none"/><text x="283" y="140" text-anchor="middle" class="sl" fill="#5F6368">two ways to apply</text>`;
+ s+=bx(105,160,170,72,'Static','a masked copy for dev/test');
+ s+=bx(291,160,170,72,'Dynamic','masked per query, by role');
+ $('#maskDiag').innerHTML=svg(560,240,s,'Masking flow');
+
+ [c,bg]=COLOR.token; s='';
+ s+=bx(8,30,168,72,'Card number','4532 0151 1283 0366',{mono:1});
+ s+=ar(178,66,205,66,c);
+ s+=bx(208,30,150,72,'Token service','random, no math link',{c,f:bg,tc:c});
+ s+=ar(360,66,387,66,c);
+ s+=bx(390,30,162,72,'Token','tok_7Qx9mB2kLp',{c,mono:1,sc:c});
+ s+=ar(283,104,283,163,c,'stores mapping',{lx:10,ly:4,anchor:'start'});
+ s+=bx(208,166,150,68,'Secure vault','token ↔ original',{c,f:bg,tc:c,sw:2.2,dash:1});
+ s+=lockI(220,174,c);
+ s+=ar(471,104,362,190,'#9AA0A6','detokenize',{dash:1,lx:44,ly:14});
+ s+=`<text x="460" y="176" text-anchor="middle" class="sl" fill="#9AA0A6">(authorised only)</text>`;
+ $('#tokDiag').innerHTML=svg(560,240,s,'Tokenization flow with vault');
+
+ [c,bg]=COLOR.enc; s='';
+ s+=bx(8,22,150,66,'Plaintext','RM 8,400',{mono:1});
+ s+=ar(160,55,200,55,c);
+ s+=bx(203,22,154,66,'Encrypt','algorithm + key',{c,f:bg,tc:c});
+ s+=ar(359,55,399,55,c);
+ s+=bx(402,22,150,66,'Ciphertext','q8Zp+1fK…==',{c,mono:1,sc:c});
+ s+=bx(8,112,268,120,'Symmetric','one shared key · faster',{top:1});
+ s+=keyI(70,190,c)+keyI(160,190,c)+`<text x="142" y="222" text-anchor="middle" class="sl" fill="${c}">same key locks &amp; unlocks</text>`;
+ s+=bx(284,112,268,120,'Asymmetric','key pair · easier to manage',{top:1});
+ s+=keyI(330,186,'#188038')+keyI(450,186,c)+`<text x="348" y="222" text-anchor="middle" class="sl" fill="#188038">public: encrypt</text><text x="468" y="222" text-anchor="middle" class="sl" fill="${c}">private: decrypt</text>`;
+ $('#encDiag').innerHTML=svg(560,240,s,'Encryption flow, symmetric and asymmetric keys');
+
+ [c,bg]=COLOR.shuf; s='';
+ const SC=['#1A73E8','#D93025','#F9AB00','#9334E6'],nm=['Aisyah','Ben','Chandra','Dewi'],sal=['6,200','8,400','4,900','9,100'],pm=[2,0,3,1];
+ s+=`<text x="135" y="30" text-anchor="middle" class="sh" fill="#5F6368">BEFORE</text><text x="420" y="30" text-anchor="middle" class="sh" fill="${c}">AFTER SHUFFLE</text>`;
+ for(let i=0;i<4;i++){const y=60+i*40;
+  s+=`<circle cx="30" cy="${y}" r="7" fill="${SC[i]}"/><text x="44" y="${y+5}" class="ss" style="fill:#202124;font-weight:600">${nm[i]}</text><rect x="150" y="${y-14}" width="96" height="28" rx="8" fill="${SC[i]}"/><text x="198" y="${y+5}" text-anchor="middle" class="sm" style="fill:#fff">RM ${sal[i]}</text>`;
+  s+=`<circle cx="310" cy="${y}" r="7" fill="${SC[i]}"/><text x="324" y="${y+5}" class="ss" style="fill:#202124;font-weight:600">${nm[i]}</text><rect x="430" y="${y-14}" width="96" height="28" rx="8" fill="${SC[pm[i]]}"/><text x="478" y="${y+5}" text-anchor="middle" class="sm" style="fill:#fff">RM ${sal[pm[i]]}</text><text x="540" y="${y+5}" class="st" fill="#C5221F">✗</text>`;}
+ s+=ar(256,120,294,120,c);
+ s+=`<rect x="60" y="214" width="440" height="26" rx="13" fill="${bg}"/><text x="280" y="232" text-anchor="middle" class="sl" fill="${c}" style="font-size:12px">Same values · same totals · wrong owners</text>`;
+ $('#shufDiag').innerHTML=svg(560,248,s,'Shuffling before and after');
+
+ [c,bg]=COLOR.fpe; s='';
+ s+=bx(8,22,168,66,'Card number','4532 0151 1283 0366',{mono:1});
+ s+=ar(178,55,205,55,c);
+ s+=bx(208,22,150,66,'FPE','key + rounds',{c,f:bg,tc:c});
+ s+=ar(360,55,387,55,c);
+ s+=bx(390,22,162,66,'Encrypted','8170 2294 5531 0472',{c,mono:1,sc:c});
+ s+=`<text x="92" y="108" text-anchor="middle" class="sm" style="fill:#80868B">#### #### #### ####</text><text x="471" y="108" text-anchor="middle" class="sm" style="fill:#80868B">#### #### #### ####</text><text x="471" y="126" text-anchor="middle" class="sl" fill="#188038">✓ passes 16-digit check</text>`;
+ s+=`<line x1="8" y1="142" x2="552" y2="142" stroke="#E3E5E8" stroke-dasharray="4 4"/><text x="8" y="160" class="sh" fill="#80868B">COMPARE: STANDARD ENCRYPTION</text>`;
+ s+=bx(8,170,168,56,'Card number','4532 0151 1283 0366',{mono:1});
+ s+=ar(178,198,205,198,'#9AA0A6');
+ s+=bx(208,170,150,56,'AES','key',{});
+ s+=ar(360,198,387,198,'#9AA0A6');
+ s+=bx(390,170,162,56,'Ciphertext','a9F+kQ2wP…==',{c:'#C5221F',mono:1,sc:'#C5221F'});
+ s+=`<text x="471" y="244" text-anchor="middle" class="sl" fill="#C5221F">✗ fails 16-digit check</text>`;
+ $('#fpeDiag').innerHTML=svg(560,250,s,'Format-preserving encryption keeps the pattern, standard encryption does not');
+})();
+
+/* ---------- utilities ---------- */
+const rd=()=>String(Math.floor(Math.random()*10));
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const AL='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+const randAl=n=>Array.from({length:n},()=>pick(AL)).join('');
+const digitsOf=s=>(s.match(/\d/g)||[]).join('');
+function cyrb53(str,seed=0){let h1=0xdeadbeef^seed,h2=0x41c6ce57^seed;for(let i=0;i<str.length;i++){const ch=str.charCodeAt(i);h1=Math.imul(h1^ch,2654435761);h2=Math.imul(h2^ch,1597334677);}
+ h1=Math.imul(h1^(h1>>>16),2246822507);h1^=Math.imul(h2^(h2>>>13),3266489909);h2=Math.imul(h2^(h2>>>16),2246822507);h2^=Math.imul(h1^(h1>>>13),3266489909);return 4294967296*(2097151&h2)+(h1>>>0);}
+const esc=s=>s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ---------- MASKING ---------- */
+const SAMPLE={card:'4532 0151 1283 0366',ic:'900101-14-5678',email:'aisyah.rahman@example.com',phone:'012-345 6789',name:'Aisyah Rahman'};
+const FAKE=['Nur Hidayah','Daniel Lee','Kavitha Raj','Amir Hakim','Mei Ling Tan','Farah Aziz','Ravi Kumar','Siti Aminah'];
+let mFake='';
+function maskPartial(type,v){
+ if(type==='email'){const i=v.indexOf('@'); if(i<1) return v.replace(/\S/g,'•'); return v[0]+v.slice(1,i).replace(/./g,'•')+v.slice(i);}
+ if(type==='name') return v.split(' ').map(w=>w?w[0]+'•'.repeat(w.length-1):w).join(' ');
+ const total=digitsOf(v).length; let seen=0;
+ return v.replace(/\d/g,d=>(++seen>total-4)?d:'•');
+}
+function maskSub(type,v){
+ if(type==='name') return pick(FAKE);
+ if(type==='email'){const i=v.indexOf('@'); const dom=i>0?v.slice(i):'@example.com'; return pick(FAKE).toLowerCase().replace(/\s+/g,'.')+dom;}
+ return v.replace(/\d/g,rd).replace(/[a-z]/g,()=>pick('abcdefghijklmnopqrstuvwxyz')).replace(/[A-Z]/g,()=>pick('ABCDEFGHIJKLMNOPQRSTUVWXYZ'));
+}
+const maskRedact=v=>v.replace(/[^\s\-@.]/g,'X');
+function maskRun(newFake){
+ const type=segVal('mField'),rule=segVal('mRule'),mt=segVal('mType'),role=segVal('mRole');
+ const v=$('#mIn').value;
+ if(newFake||!mFake) mFake=maskSub(type,v);
+ let out=rule==='partial'?maskPartial(type,v):rule==='sub'?mFake:maskRedact(v);
+ const authSees=mt==='dynamic'&&role==='auth';
+ const who=role==='dev'?'developer':'authorised investigator';
+ $('#mOutTag').textContent='What the '+who+' sees';
+ $('#mRegen').style.visibility=rule==='sub'?'visible':'hidden';
+ $('#mArrow').textContent=authSees?'dynamic rule: authorised → shown unmasked':'masking rule applied';
+ const outEl=$('#mOut');
+ if(authSees){outEl.classList.remove('out');outEl.classList.add('good');renderChars(outEl,out,v);}
+ else{outEl.classList.add('out');outEl.classList.remove('good');renderChars(outEl,v,out,{dimKept:true});}
+ $('#mCap').innerHTML=mt==='static'
+  ?'<b>Static:</b> the masked copy is what is stored, so every user of the test database sees this, whatever their role.'
+  :(authSees?'<b>Dynamic:</b> same database, but this user is authorised, so the query returns the real value.':'<b>Dynamic:</b> the real value stays in the database; it is masked at query time because this user is not authorised.');
+}
+SEG.mField=t=>{$('#mIn').value=SAMPLE[t];mFake='';maskRun(true)};
+SEG.mRule=()=>maskRun(); SEG.mType=()=>maskRun(); SEG.mRole=()=>maskRun();
+$('#mIn').value=SAMPLE.card; $('#mIn').addEventListener('input',()=>maskRun(true)); $('#mRegen').onclick=()=>maskRun(true);
+
+/* ---------- TOKENIZATION ---------- */
+const vault=new Map(); let vaultRows=[]; let lastTok=null;
+function newToken(v,style){
+ if(style==='fp'){const total=digitsOf(v).length;let seen=0;return v.replace(/\d/g,d=>(++seen>total-4)?d:rd());}
+ return 'tok_'+randAl(14);
+}
+function tokenize(v,style,store=true){
+ const key=style+'|'+v; let reused=true;
+ if(!vault.has(key)){reused=false; let t; do{t=newToken(v,style)}while([...vault.values()].includes(t)); vault.set(key,t); if(store) vaultRows.unshift({t,v});}
+ return {t:vault.get(key),reused};
+}
+function tokRun(){
+ const v=$('#tIn').value.trim(); if(!v) return;
+ const style=segVal('tStyle'); const {t,reused}=tokenize(v,style);
+ lastTok={t,v};
+ renderChars($('#tOut'),v,t,{dimKept:true});
+ $('#tReuse').textContent=reused?'↺ already in vault: same token reused':'';
+ renderVault(t);
+ msg($('#tBack'),'Press Detokenize to try turning the token back.'); $('#tBack').style.color='var(--ink3)';
+}
+function renderVault(hi){
+ const rows=vaultRows.slice(0,6);
+ $('#tVault').innerHTML=rows.length?`<table class="vt"><thead><tr><th>Token</th><th>Original</th></tr></thead><tbody>${rows.map(r=>`<tr class="${r.t===hi?'new':''}"><td style="color:var(--c)">${esc(r.t)}</td><td>${esc(r.v)}</td></tr>`).join('')}</tbody></table>`:'<div class="empty">Empty. Tokenize a value to add a mapping.</div>';
+}
+$('#tGo').onclick=tokRun;
+$('#tIn').addEventListener('keydown',e=>{if(e.key==='Enter')tokRun()});
+$('#tRnd').onclick=()=>{$('#tIn').value=pick(['4','5'])+Array.from({length:15},rd).join('').replace(/(\d{3})(\d{4})(\d{4})(\d{4})/,'$1 $2 $3 $4');tokRun()};
+SEG.tStyle=tokRun;
+SEG.tAccess=()=>{};
+$('#tDetok').onclick=()=>{
+ const el=$('#tBack');
+ if(!lastTok){msg(el,'Tokenize a value first.');return;}
+ if(segVal('tAccess')==='no'){
+  msg(el,'✗ Access denied. Without the vault there is nothing to reverse: the token was random, so no formula leads back to the card number.','bad');
+ }else{
+  el.className='val good'; el.style.cssText=''; renderChars(el,lastTok.t.padEnd(lastTok.v.length,' '),lastTok.v);
+  setTimeout(()=>{el.insertAdjacentHTML('beforeend','<div style="font:600 .8rem Inter;color:var(--ok);margin-top:4px">✓ Looked up in the vault: authorised caller</div>')},reduce?0:700);
+ }
+};
+
+/* ---------- ENCRYPTION ---------- */
+const hasSubtle=!!(window.crypto&&crypto.subtle);
+const enc=new TextEncoder(),dec=new TextDecoder();
+const b64=u=>{let s='';u.forEach(b=>s+=String.fromCharCode(b));return btoa(s)};
+const unb64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+async function deriveKey(pass,salt){const base=await crypto.subtle.importKey('raw',enc.encode(pass),'PBKDF2',false,['deriveKey']);
+ return crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:100000,hash:'SHA-256'},base,{name:'AES-GCM',length:256},false,['encrypt','decrypt']);}
+function toyXor(bytes,pass){return bytes.map((b,i)=>b^(cyrb53(pass+'#'+i)&255))}
+async function aesEncrypt(text,pass){
+ if(!hasSubtle) return b64(toyXor(enc.encode(text),pass));
+ const salt=crypto.getRandomValues(new Uint8Array(16)),iv=crypto.getRandomValues(new Uint8Array(12));
+ const key=await deriveKey(pass,salt);
+ const ct=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv},key,enc.encode(text)));
+ const all=new Uint8Array(28+ct.length);all.set(salt);all.set(iv,16);all.set(ct,28);return b64(all);
+}
+async function aesDecrypt(b,pass){
+ if(!hasSubtle) return dec.decode(toyXor(unb64(b),pass));
+ const all=unb64(b),key=await deriveKey(pass,all.slice(0,16));
+ return dec.decode(await crypto.subtle.decrypt({name:'AES-GCM',iv:all.slice(16,28)},key,all.slice(28)));
+}
+let rsa=null,lastCipher=null;
+async function fp(k){const raw=new Uint8Array(await crypto.subtle.exportKey('spki',k));const h=new Uint8Array(await crypto.subtle.digest('SHA-256',raw));return [...h.slice(0,4)].map(b=>b.toString(16).padStart(2,'0')).join(' ');}
+async function ensureRsa(){
+ if(rsa) return rsa;
+ $('#eAsymKey').innerHTML='<span class="chip">Generating a 2048-bit RSA key pair…</span>';
+ rsa=await crypto.subtle.generateKey({name:'RSA-OAEP',modulusLength:2048,publicExponent:new Uint8Array([1,0,1]),hash:'SHA-256'},true,['encrypt','decrypt']);
+ const f=await fp(rsa.publicKey);
+ $('#eAsymKey').innerHTML=`<span class="chip y">🔓 Public key ${f}… (shareable)</span><span class="chip n">🔐 Private key (kept secret by receiver)</span>`;
+ return rsa;
+}
+SEG.eMode=async m=>{
+ const a=m==='asym';
+ $('#eSymKey').style.display=a?'none':''; $('#eAsymKey').style.display=a?'':'none';
+ $('#eDecSym').style.display=a?'none':''; $('#eDecAsym').style.display=a?'flex':'none';
+ lastCipher=null; $('#eOut').textContent='—'; $('#eChips').innerHTML=''; $('#eLen').textContent='';
+ msg($('#eBack'),'Encrypt first, then try decrypting.'); $('#eBack').style.color='var(--ink3)';
+ if(a){ if(!hasSubtle){$('#eAsymKey').innerHTML='<span class="chip n">Your browser blocks Web Crypto here, so RSA is unavailable.</span>';return;} await ensureRsa(); }
+};
+async function encRun(){
+ const text=$('#eIn').value; if(!text) return;
+ const mode=segVal('eMode'); let c;
+ try{
+  if(mode==='sym') c=await aesEncrypt(text,$('#eKey').value);
+  else{ if(!hasSubtle) return; const k=await ensureRsa(); c=b64(new Uint8Array(await crypto.subtle.encrypt({name:'RSA-OAEP'},k.publicKey,enc.encode(text)))); }
+ }catch(e){msg($('#eOut'),'Could not encrypt: '+esc(e.message),'bad');return;}
+ const was=lastCipher?lastCipher.c:'';
+ lastCipher={c,mode};
+ const out=$('#eOut'); out.className='val out small'; renderChars(out,'',c,{step:4});
+ $('#eLen').textContent=`${text.length} chars → ${c.length} chars`;
+ $('#eChips').innerHTML=`<span class="chip n">✗ Format lost (length &amp; characters change)</span><span class="chip n">✗ Can't SUM, JOIN or search it</span>`+(was&&mode==='sym'?'<span class="chip y">Click again: new random salt &amp; IV, so new ciphertext</span>':'<span class="chip">Click Encrypt again: ciphertext changes every time</span>');
+ msg($('#eBack'),'Now decrypt it.'); $('#eBack').style.color='var(--ink3)';
+}
+$('#eGo').onclick=encRun;
+$('#eDec').onclick=async()=>{
+ const el=$('#eBack'); if(!lastCipher||lastCipher.mode!=='sym'){msg(el,'Encrypt something first.');return;}
+ try{const p=await aesDecrypt(lastCipher.c,$('#eKey2').value);
+  if(!hasSubtle&&p!==$('#eIn').value) throw new Error();
+  el.className='val good small'; el.style.cssText=''; renderChars(el,'',p);
+  el.insertAdjacentHTML('beforeend','<div style="font:600 .8rem Inter;color:var(--ok);margin-top:4px">✓ Right key: original recovered</div>');
+ }catch(e){msg(el,'✗ Decryption failed: wrong key. Without the key the ciphertext is useless.','bad');}
+};
+$('#eDecPriv').onclick=async()=>{
+ const el=$('#eBack'); if(!lastCipher||lastCipher.mode!=='asym'){msg(el,'Encrypt something first.');return;}
+ try{const p=dec.decode(await crypto.subtle.decrypt({name:'RSA-OAEP'},rsa.privateKey,unb64(lastCipher.c)));
+  el.className='val good small'; el.style.cssText=''; renderChars(el,'',p);
+  el.insertAdjacentHTML('beforeend','<div style="font:600 .8rem Inter;color:var(--ok);margin-top:4px">✓ Private key: original recovered</div>');
+ }catch(e){msg(el,'✗ '+esc(e.message),'bad');}
+};
+$('#eDecPub').onclick=()=>{ if(!lastCipher||lastCipher.mode!=='asym'){msg($('#eBack'),'Encrypt something first.');return;}
+ msg($('#eBack'),'✗ The public key can only encrypt. Anyone can lock the box; only the private-key holder can open it.','bad');};
+
+/* ---------- SHUFFLING ---------- */
+const EMP=[['Aisyah','Finance',6200],['Ben','IT',8400],['Chandra','HR',4900],['Dewi','IT',9100],['Farid','Ops',5300],['Grace','Finance',7000],['Hafiz','Ops',4500],['Indra','HR',5800]];
+const SCOL=['#1A73E8','#D93025','#F9AB00','#188038','#9334E6','#E8710A','#12B5CB','#E52592'];
+let order=EMP.map((_,i)=>i);
+const rm=n=>'RM '+n.toLocaleString('en-US');
+function stats(arr){const s=[...arr].sort((a,b)=>a-b),tot=arr.reduce((a,b)=>a+b,0);return [['Total',rm(tot)],['Average',rm(Math.round(tot/arr.length))],['Median',rm((s[3]+s[4])/2)],['Min',rm(s[0])],['Max',rm(s[s.length-1])]];}
+function renderShuf(animate){
+ const old={}; if(animate) document.querySelectorAll('#sBody .pill').forEach(p=>old[p.dataset.k]=p.getBoundingClientRect());
+ let linked=0;
+ $('#sBody').innerHTML=EMP.map((e,i)=>{const k=order[i],m=k===i; if(m)linked++;
+  return `<tr><td><span class="pdot" style="background:${SCOL[i]}"></span>${e[0]}</td><td style="color:var(--ink2)">${e[1]}</td><td><span class="pill" data-k="${k}" style="--pc:${SCOL[k]}">${rm(EMP[k][2])}</span></td><td>${m?'<span class="lk">✓ real</span>':'<span class="br">✗ broken</span>'}</td></tr>`}).join('');
+ if(animate&&!reduce) document.querySelectorAll('#sBody .pill').forEach(p=>{const o=old[p.dataset.k]; if(!o) return; const n=p.getBoundingClientRect();
+  p.style.transform=`translate(${o.left-n.left}px,${o.top-n.top}px)`; p.style.transition='none';
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{p.style.transition='transform .7s cubic-bezier(.2,.8,.2,1)';p.style.transform='';}));});
+ const L=$('#sLinked'); L.textContent=linked+'/8'; L.style.color=linked===8?'var(--ok)':'var(--no)';
+ const before=stats(EMP.map(e=>e[2])),after=stats(order.map(k=>EMP[k][2]));
+ $('#sStats').innerHTML=after.map(([k,v],i)=>`<div class="stat"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${v===before[i][1]?'✓ unchanged':'changed'}</div></div>`).join('');
+}
+$('#sGo').onclick=()=>{let o;do{o=[...order];for(let i=o.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[o[i],o[j]]=[o[j],o[i]];}}while(o.every((v,i)=>v===order[i])||o.filter((v,i)=>v===i).length>2);order=o;renderShuf(true);};
+$('#sReset').onclick=()=>{order=EMP.map((_,i)=>i);renderShuf(true)};
+
+/* ---------- FPE (FF1-style Feistel, teaching model) ---------- */
+function fpeCore(ds,key,decrypt){
+ const n=ds.length,u=Math.floor(n/2),v=n-u,R=10,pad=(x,m)=>String(x).padStart(m,'0');
+ let A=ds.slice(0,u),B=ds.slice(u); const steps=[{r:decrypt?'in':'start',A,B}];
+ if(!decrypt){for(let i=0;i<R;i++){const m=i%2===0?u:v,mod=10**m,y=cyrb53(key+'|'+i+'|'+B)%mod,C=pad((Number(A)+y)%mod,m);A=B;B=C;steps.push({r:i+1,A,B});}}
+ else{for(let i=R-1;i>=0;i--){const m=i%2===0?u:v,mod=10**m,y=cyrb53(key+'|'+i+'|'+A)%mod,C=pad(((Number(B)-y)%mod+mod)%mod,m);B=A;A=C;steps.push({r:i+1,A,B});}}
+ return {out:A+B,steps};
+}
+function fpeApply(text,key,decrypt){
+ const ds=digitsOf(text); if(ds.length<2||ds.length>30) return null;
+ const r=fpeCore(ds,key,decrypt); let i=0;
+ return {text:text.replace(/\d/g,()=>r.out[i++]),steps:r.steps};
+}
+const pattern=s=>s.replace(/\d/g,'#');
+let fLast=null;
+async function fpeRun(){
+ const v=$('#fIn').value,key=$('#fKey').value,r=fpeApply(v,key,false),out=$('#fOut');
+ if(!r){msg(out,'Enter 2 to 30 digits (separators like spaces or dashes are kept).','bad');$('#fChips').innerHTML='';return;}
+ fLast={v,c:r.text}; out.className='val out'; out.style.cssText=''; renderChars(out,v,r.text,{dimKept:true});
+ const same=pattern(v)===pattern(r.text);
+ $('#fChips').innerHTML=`<span class="chip ${r.text.length===v.length?'y':'n'}">✓ Length ${v.length} = ${r.text.length}</span><span class="chip ${same?'y':'n'}">✓ Pattern ${esc(pattern(v))}</span><span class="chip y">✓ Separators untouched</span>`;
+ $('#fRounds').innerHTML=`<table class="rd"><thead><tr><th>Round</th><th>Left half</th><th>Right half</th></tr></thead><tbody>${r.steps.map((s,i)=>`<tr><td>${s.r==='start'?'Start':s.r}</td><td class="${i&&i%2===1?'':'hl'}">${s.A}</td><td class="${i?'hl':''}">${s.B}</td></tr>`).join('')}</tbody></table><div class="caption">Each round adds a key-based value to one half (mod 10ⁿ), then swaps halves, so every digit stays 0–9.</div>`;
+ msg($('#fBack'),'Now decrypt it with the right key, then a wrong one.'); $('#fBack').style.color='var(--ink3)';
+ try{const a=await aesEncrypt(v,key);$('#fAes').innerHTML=`<span style="color:var(--no)">${esc(a)}</span><div style="font:700 .8rem Inter;color:var(--no);margin-top:6px">✗ ${a.length} characters with letters and symbols: a card-number validator would reject it</div>`;}catch(e){}
+}
+$('#fGo').onclick=fpeRun;
+SEG.fSample=v=>{$('#fIn').value=v;fpeRun()};
+$('#fDec').onclick=()=>{
+ const el=$('#fBack'); if(!fLast){msg(el,'Encrypt first.');return;}
+ const r=fpeApply(fLast.c,$('#fKey2').value,true); const ok=r.text===fLast.v;
+ el.className='val '+(ok?'good':'out'); el.style.cssText=ok?'':'border-color:var(--warn);background:var(--warnbg)';
+ renderChars(el,fLast.c,r.text);
+ el.insertAdjacentHTML('beforeend',ok?'<div style="font:600 .8rem Inter;color:var(--ok);margin-top:4px">✓ Right key: original recovered</div>':'<div style="font:600 .8rem Inter;color:var(--warn);margin-top:4px">⚠ Wrong key: still a valid-looking number, but not the original</div>');
+};
+
+/* ---------- COMPARE ---------- */
+const cVault=new Map();
+async function cmpRun(){
+ const v=$('#cIn').value.trim()||SAMPLE.card;
+ if(!cVault.has(v)) cVault.set(v,'tok_'+randAl(14));
+ const pool=[v,'5104 7781 2290 4413','4716 3302 9918 2057','5399 0045 6612 7780','4024 0071 5523 9001'];
+ let o; do{o=[1,2,3,4][Math.floor(Math.random()*4)]}while(false);
+ const f=fpeApply(v,'utm-class-2026',false);
+ let e='…'; try{e=await aesEncrypt(v,'utm-class-2026')}catch(_){}
+ const rows=[
+  ['mask',maskPartial('card',v),'partial mask, last 4 kept'],
+  ['token',cVault.get(v),'random; real value only in the vault'],
+  ['enc',e,'AES-256-GCM ciphertext'],
+  ['shuf',pool[o],"this row now holds another customer's number"],
+  ['fpe',f?f.text:'(needs 2–30 digits)','same length and pattern']
+ ];
+ $('#cRows').innerHTML=rows.map(([k,out,note])=>{const t=T[k];return `<div class="cmprow" data-t="${k}"><div class="nm"><div class="ti">${ICON[k]}</div>${t.name.replace(' (shuffling)','')}</div><div class="o" data-from="${esc(v)}" data-to="${esc(out)}"></div><div class="bb">${badge(t.rev[0],t.rev[1])}${badge(t.fmt[0],t.fmt[1])}${badge(t.ana[0],t.ana[1])}</div></div>`}).join('');
+ document.querySelectorAll('#cRows .o').forEach((el,i)=>{const to=el.dataset.to;renderChars(el,el.dataset.from,to,{dimKept:true,step:to.length>40?5:30});el.insertAdjacentHTML('beforeend',`<small>${rows[i][2]}</small>`)});
+}
+$('#cGo').onclick=cmpRun; $('#cIn').addEventListener('keydown',e=>{if(e.key==='Enter')cmpRun()});
+const cell=a=>`<td class="c ${a==='y'?'ty':a==='n'?'tn':'tm'}">${SYM[a]}</td>`;
+$('#mx').innerHTML=`<table class="mx"><thead><tr><th>Technique</th><th>How it works</th><th style="text-align:center">Reversible</th><th style="text-align:center">Format kept</th><th style="text-align:center">Analytics</th><th>Best for</th></tr></thead><tbody>${TECH.map(t=>`<tr data-t="${t.k}"><td><span class="tname"><span class="sw"></span>${t.name}</span></td><td>${t.how}</td>${cell(t.rev[0])}${cell(t.fmt[0])}${cell(t.ana[0])}<td>${t.use}</td></tr>`).join('')}</tbody></table>
+<div class="chips"><span class="chip y">✓ yes</span><span class="chip m">~ depends / partial</span><span class="chip n">✗ no</span></div>`;
+
+/* ---------- CHOOSE ---------- */
+const ATTR={mask:{rev:0,fmt:2,ana:1},token:{rev:1,fmt:1,ana:1},enc:{rev:1,fmt:0,ana:0},shuf:{rev:0,fmt:2,ana:2},fpe:{rev:1,fmt:2,ana:1}};
+function choose(){
+ const q1=segVal('q1'),q2=segVal('q2'),q3=segVal('q3'),any=[q1,q2,q3].some(x=>x!=='u');
+ const R=TECH.map(t=>{const a=ATTR[t.k];let sc=0,no=[],why=[];
+  if(q1==='y'){a.rev?(sc+=2,why.push('Reversible with '+(t.k==='token'?'the vault':'the key'))):no.push('Cannot get the original back')}
+  if(q1==='n'){a.rev?(sc+=1,why.push('Reversible, so a key or vault must be guarded')):(sc+=2,why.push('One-way: nothing to reverse or leak'))}
+  if(q2==='y'){a.fmt===2?(sc+=2,why.push('Keeps the format')):a.fmt===1?(sc+=1,why.push('Format depends on implementation')):no.push('Output format changes')}
+  if(q3==='y'){a.ana===2?(sc+=2,why.push('Distributions and totals stay real')):a.ana===1?(sc+=1,why.push('Usable, but may break joins')):no.push("Ciphertext can't be queried or aggregated")}
+  return {t,sc,no,why};});
+ const best=Math.max(...R.filter(r=>!r.no.length).map(r=>r.sc));
+ $('#res').innerHTML=R.map(({t,sc,no,why})=>{const cls=!any?'ok':no.length?'no':sc===best?'best':'ok';
+  const st={ok:any?'Possible':'Answer the questions',no:'Not suitable',best:'Best fit'}[cls];
+  return `<div class="rc ${cls}" data-t="${t.k}">${cls==='best'?'<span class="flag">Best fit</span>':''}<div class="ti">${ICON[t.k]}</div><h4>${t.name}</h4><div class="st">${st}</div>${any?`<ul>${[...no.map(x=>'✗ '+x),...why.map(x=>'✓ '+x)].map(x=>`<li>${x}</li>`).join('')}</ul>`:''}</div>`}).join('');
+}
+SEG.q1=SEG.q2=SEG.q3=choose;
+
+/* ---------- init ---------- */
+maskRun(true); renderVault(); renderShuf(false); choose();
+go(location.hash.slice(1)||'overview');
+// pre-run demos so every tab has something on screen
+tokRun(); fpeRun(); cmpRun();
+</script>
+</body>
+</html>
